@@ -1,0 +1,9 @@
+{
+  "dataParts": 4,
+  "dataBytes": 125989122,
+  "dataSha256": "afad185758068d3a398bf3164ebd1c038c5224cf437e2b22d65c61e9993c773f",
+  "wasmSha256": "59470078de3e3c5f35703b7c563694879b0732d05b6995c9f0c2dae93bbe9752",
+  "frameworkSha256": "67455ad40cf1a9f6cb57b962d769027f277fa1d94576f415c8574735d1be4e3f",
+  "builtFrom": "Artifacts/Builds/20260906T110216Z-web",
+  "unityEditor": "6000.3.23f1"
+}

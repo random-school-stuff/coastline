@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111e19">
+  <title>海岸城 · Coastline</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111e19;color:#f1f2e9;font-family:system-ui,sans-serif}
+    canvas{display:block;width:100%;height:100%;outline:none}
+    #loading{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(ellipse at 75% 20%,#29453b,#111e19 65%)}
+    .load-card{width:min(380px,85vw)}.eyebrow{font-size:13px;letter-spacing:.28em;color:#ecc26a}h1{font-size:52px;font-weight:500;margin:22px 0 36px}
+    progress{width:100%;height:3px;accent-color:#ecc26a;border:0}#status{font-size:16px;line-height:1.6;color:#c3cfc7;min-height:3.2em}#error{display:none;position:fixed;bottom:24px;left:24px;max-width:min(560px,90vw);background:#4b2621;padding:18px 22px;line-height:1.5;border-left:3px solid #eba58d;white-space:pre-wrap}
+    button{background:#d9c48d;color:#16251d;border:0;padding:12px 20px;font:inherit;cursor:pointer}button:focus-visible{outline:3px solid white;outline-offset:4px}[hidden]{display:none!important}
+  </style>
+</head>
+<body>
+  <canvas id="unity-canvas" tabindex="0" aria-label="海岸城游戏画面。WASD 移动，M 地图，Esc 暂停。"></canvas>
+  <section id="loading" aria-live="polite">
+    <div class="load-card"><div class="eyebrow">COASTLINE</div><h1>海岸城</h1><progress id="progress" max="1" value="0" aria-label="游戏加载进度"></progress><p id="status">正在载入街区、人物与城市生活。</p><button id="reload" hidden>重新载入</button></div>
+  </section>
+  <div id="error" role="alert"></div>
+  <script src="Build/Web.loader.js"></script>
+  <script>
+    const canvas=document.getElementById('unity-canvas');
+    const loading=document.getElementById('loading');
+    const progress=document.getElementById('progress');
+    const status=document.getElementById('status');
+    const error=document.getElementById('error');
+    function showError(message){error.textContent='游戏运行遇到问题\n'+String(message);error.style.display='block';}
+    document.getElementById('reload').addEventListener('click',()=>location.reload());
+    window.addEventListener('error',event=>showError(event.message));
+    window.addEventListener('unhandledrejection',event=>showError(event.reason));
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.addEventListener('message',event=>{
+        const data=event.data||{};
+        if(data.type==='coastline-progress'&&data.total>0){
+          progress.value=Math.min(.85,data.loaded/data.total*.85);
+          status.textContent='正在下载城市数据 '+Math.round(data.loaded/data.total*100)+'%（约 121 MB）';
+        }
+      });
+    }
+    async function boot(){
+      try{
+        if(!('serviceWorker' in navigator)||typeof DecompressionStream==='undefined'){
+          throw new Error('当前浏览器缺少部署所需的 Service Worker 或解压能力，请使用新版 Chrome / Edge / Firefox / Safari。');
+        }
+        await navigator.serviceWorker.register('sw.js');
+        await navigator.serviceWorker.ready;
+        if(!navigator.serviceWorker.controller){
+          await new Promise(resolve=>navigator.serviceWorker.addEventListener('controllerchange',resolve,{once:true}));
+        }
+      }catch(failure){
+        status.textContent='线上部署组件未就绪。';
+        document.getElementById('reload').hidden=false;
+        showError(failure&&failure.message||failure);
+        return;
+      }
+      createUnityInstance(canvas,{
+        arguments:[],
+        autoSyncPersistentDataPath:true,
+        dataUrl:'Build/Web.data.gz',
+        frameworkUrl:'Build/Web.framework.js.gz',
+        codeUrl:'Build/Web.wasm.gz',
+        streamingAssetsUrl:'StreamingAssets',
+        companyName:"Coastline",
+        productName:"海岸城 Coastline",
+        productVersion:"1.0",
+        devicePixelRatio:Math.min(window.devicePixelRatio || 1, 2),
+        showBanner:(message,type)=>{if(type==='error')showError(message);}
+      },value=>{progress.value=.85+value*.15;status.textContent='正在载入街区 '+Math.round(value*100)+'%';}).then(()=>{
+        loading.hidden=true;
+        document.body.dataset.gameLoad='ready';
+      }).catch(message=>{
+        status.textContent='加载未完成。请检查连接后重试。';
+        document.getElementById('reload').hidden=false;
+        document.body.dataset.gameLoad='failed';
+        showError(message);
+      });
+    }
+    boot();
+  </script>
+</body>
+</html>
